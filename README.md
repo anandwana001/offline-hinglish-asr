@@ -78,8 +78,12 @@ adb shell am start -n com.akshay.offlineasr/.MainActivity
 
 | Device | Mode | Locale | Score | Missed words |
 |---|---|---|---|---|
-|  |  |  |  |  |
-|  |  |  |  |  |
+| Android Emulator (sdk_gphone64_arm64, Android 16 / API 36.1, Google Play) | NONE — ADVANCED & BASIC both `UNAVAILABLE` | hi-IN | n/a (could not run) | n/a |
+| Android Emulator (sdk_gphone64_arm64, Android 16 / API 36.1, Google Play) | NONE — ADVANCED & BASIC both `UNAVAILABLE` | en-IN | n/a (could not run) | n/a |
+|  |  | hi-IN |  |  |
+|  |  | en-IN |  |  |
+
+The blank rows are for a real phone. Use **Copy results as Markdown** in the app to get the per-sentence transcripts.
 
 ## Tests
 
