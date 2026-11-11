@@ -66,8 +66,10 @@ class AsrViewModel(app: Application) : AndroidViewModel(app), AsrActions {
     initJob?.cancel(); downloadJob?.cancel(); stopListeningInternal()
     recognizer?.close(); recognizer = null
     val loc = _state.value.locale
+    val sbg = readSpeechServices()
+    Log.i(TAG, "Speech Services: $sbg (ML Kit minimum $MIN_SPEECH_SERVICES_VERSION)")
     _state.update {
-      it.copy(checking = true, featureStatus = null, mode = null, attempts = emptyList(), download = null,
+      it.copy(speechServices = sbg, checking = true, featureStatus = null, mode = null, attempts = emptyList(), download = null,
         partialText = "", finalText = "", recognitionError = null, sessionEnded = false)
     }
     initJob = viewModelScope.launch {
@@ -105,6 +107,11 @@ class AsrViewModel(app: Application) : AndroidViewModel(app), AsrActions {
       }
     }
   }
+
+  private fun readSpeechServices(): SpeechServicesInfo? = runCatching {
+    val pi = getApplication<Application>().packageManager.getPackageInfo(SPEECH_SERVICES_PACKAGE, 0)
+    SpeechServicesInfo(pi.longVersionCode, pi.versionName ?: "?")
+  }.getOrNull()
 
   override fun setLocale(locale: AsrLocale) {
     if (locale == _state.value.locale) return

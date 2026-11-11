@@ -76,7 +76,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.akshay.offlineasr.AsrActions
 import com.akshay.offlineasr.AsrLocale
 import com.akshay.offlineasr.AsrViewModel
+import com.akshay.offlineasr.MIN_SPEECH_SERVICES_VERSION
+import com.akshay.offlineasr.SPEECH_SERVICES_PACKAGE
 import com.akshay.offlineasr.Screen
+import com.akshay.offlineasr.SpeechServicesInfo
 import com.akshay.offlineasr.TEST_SENTENCES
 import com.akshay.offlineasr.TestRun
 import com.akshay.offlineasr.UiState
@@ -449,6 +452,21 @@ private fun UnavailableScreen(state: UiState, onLocale: (AsrLocale) -> Unit, onR
     "checkStatus() returned FeatureStatus.UNAVAILABLE for ${state.locale.tag} in every mode tried on $deviceLabel ($androidLabel).",
     style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center,
   )
+  SpeechServicesCard(state.speechServices)
+  if (state.attempts.any { "PERMISSION_DENIED" in it }) {
+    Column(
+      Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Warn.copy(alpha = 0.16f))
+        .border(2.dp, Warn, RoundedCornerShape(16.dp)).padding(14.dp),
+    ) {
+      Text("Speech Services refused access", style = MaterialTheme.typography.titleLarge, color = Warn)
+      Text(
+        "ML Kit reached Speech Services, but the service answered PERMISSION_DENIED (\"Api access revoked\"). " +
+          "Speech Services itself decides this, not this app. Right after an update it can take minutes to hours to settle, and a restart can help. " +
+          "If it never clears, this device is probably not enabled for the alpha.",
+        style = MaterialTheme.typography.bodyMedium,
+      )
+    }
+  }
   Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Panel).padding(14.dp)) {
     Text("What the API reported", style = MaterialTheme.typography.titleMedium, color = Mint)
     state.attempts.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
@@ -465,6 +483,40 @@ private fun UnavailableScreen(state: UiState, onLocale: (AsrLocale) -> Unit, onR
   }
   LocaleSwitcher(state, onLocale)
   Button(onClick = onRetry, modifier = Modifier.fillMaxWidth().height(56.dp)) { Text("↻ Check again") }
+}
+
+@Composable
+private fun SpeechServicesCard(info: SpeechServicesInfo?) {
+  val context = LocalContext.current
+  val bad = info == null || info.tooOld
+  Column(
+    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (bad) Warn.copy(alpha = 0.16f) else Panel)
+      .border(2.dp, if (bad) Warn else Outline, RoundedCornerShape(16.dp)).padding(14.dp),
+  ) {
+    Text(if (bad) "Likely root cause" else "Speech Services by Google", style = MaterialTheme.typography.titleLarge, color = Warn)
+    when {
+      info == null -> Text("\"Speech Recognition & Synthesis from Google\" ($SPEECH_SERVICES_PACKAGE) is not installed. ML Kit needs it.", style = MaterialTheme.typography.bodyLarge)
+      info.tooOld -> {
+        Text("\"Speech Recognition & Synthesis from Google\" is too old for ML Kit.", style = MaterialTheme.typography.bodyLarge)
+        Text("Installed: ${info.versionCode}", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Miss, modifier = Modifier.padding(top = 6.dp))
+        Text("ML Kit needs: ≥ $MIN_SPEECH_SERVICES_VERSION", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Mint)
+        Text(info.versionName, style = MaterialTheme.typography.bodySmall, color = TextMuted)
+      }
+      else -> Text("Version ${info.versionCode} meets ML Kit's minimum ($MIN_SPEECH_SERVICES_VERSION) — not the cause.", style = MaterialTheme.typography.bodyMedium)
+    }
+    if (bad) {
+      Spacer(Modifier.height(10.dp))
+      Button(
+        onClick = {
+          val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$SPEECH_SERVICES_PACKAGE"))
+          val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$SPEECH_SERVICES_PACKAGE"))
+          runCatching { context.startActivity(market) }.onFailure { context.startActivity(web) }
+        },
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+      ) { Text("Update in Play Store", style = MaterialTheme.typography.labelLarge) }
+      Text("Then come back and tap ↻ Check again.", style = MaterialTheme.typography.bodySmall, color = TextMuted, modifier = Modifier.padding(top = 4.dp))
+    }
+  }
 }
 
 private fun mb(b: Long) = "%.1f MB".format(b / 1_048_576.0)

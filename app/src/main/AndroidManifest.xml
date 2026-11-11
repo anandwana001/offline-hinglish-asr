@@ -25,6 +25,9 @@
 
     <!-- Needed on API 30+ to see/bind the platform TTS engine for the fallback. -->
     <queries>
+        <!-- Read the Speech Services version to explain UNAVAILABLE. -->
+        <package android:name="com.google.android.tts" />
+        <package android:name="com.android.vending" />
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>

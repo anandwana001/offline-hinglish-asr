@@ -17,6 +17,19 @@ enum class AsrLocale(val tag: String, val locale: Locale, val documented: Boolea
 
 enum class Screen { HOME, TEST, RESULTS }
 
+const val SPEECH_SERVICES_PACKAGE = "com.google.android.tts"
+
+/**
+ * Minimum Speech Services version code genai-speech-recognition 1.0.0-alpha2 accepts. Found in the
+ * SDK bytecode (SpeechRecognizer init: `if (sbgVersionCode >= 210665810L) enabled = true`); below it,
+ * checkStatus() returns UNAVAILABLE for every locale and mode. Not mentioned in the docs.
+ */
+const val MIN_SPEECH_SERVICES_VERSION = 210_665_810L
+
+data class SpeechServicesInfo(val versionCode: Long, val versionName: String) {
+  val tooOld get() = versionCode < MIN_SPEECH_SERVICES_VERSION
+}
+
 val TEST_SENTENCES = listOf(
   "Kal office nahi aa raha, mera laptop crash ho gaya.",
   "Bhai, meeting ko 4 baje shift kar do please.",
@@ -54,6 +67,8 @@ data class UiState(
   val mode: Int? = null,
   /** One line per (mode → status) attempt, shown on the UNAVAILABLE screen. */
   val attempts: List<String> = emptyList(),
+  /** Installed "Speech Recognition & Synthesis from Google" (com.google.android.tts); null = not installed. */
+  val speechServices: SpeechServicesInfo? = null,
   val download: DownloadUi? = null,
   val listening: Boolean = false,
   val audioLevel: Int = 0,

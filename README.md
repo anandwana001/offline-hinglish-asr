@@ -80,6 +80,7 @@ adb shell am start -n com.akshay.offlineasr/.MainActivity
 |---|---|---|---|---|
 | Android Emulator (sdk_gphone64_arm64, Android 16 / API 36.1, Google Play) | NONE — ADVANCED & BASIC both `UNAVAILABLE` | hi-IN | n/a (could not run) | n/a |
 | Android Emulator (sdk_gphone64_arm64, Android 16 / API 36.1, Google Play) | NONE — ADVANCED & BASIC both `UNAVAILABLE` | en-IN | n/a (could not run) | n/a |
+| OnePlus Nord 2 5G (DN2101, Dimensity 1200 MT6893, Android 13) | NONE: Speech Services 210645707 was below the 210665810 minimum, so `UNAVAILABLE`. After updating to 210693705: `PERMISSION_DENIED: Api access revoked` | hi-IN | n/a (could not run) | n/a |
 |  |  | hi-IN |  |  |
 |  |  | en-IN |  |  |
 
@@ -117,6 +118,14 @@ ML Kit TTS returns no voices there, so the app falls back to platform TTS. You n
   compiles but throws `NoSuchMethodError: speechSynthesizerOptions$default` at runtime, because the AAR
   has no Kotlin default-argument bridge. Workaround: pass the lambda explicitly, as in
   `speechSynthesizerOptions(locale) {}`.
+- **Hidden minimum Speech Services version.** `genai-speech-recognition:1.0.0-alpha2` reads the version code of
+  `com.google.android.tts` ("Speech Recognition & Synthesis from Google"). If it is below **210665810**, every
+  `checkStatus()` returns `UNAVAILABLE` immediately, for every locale and mode, without contacting the service.
+  The docs only say "latest version". The app shows the installed and required versions, plus an
+  **Update in Play Store** button.
+- **After that gate:** on a OnePlus Nord 2 (MT6893, Android 13), Speech Services `210693705` was reachable but
+  answered `PERMISSION_DENIED: Api access revoked` in both modes. Speech Services decides this itself. It may
+  be a delay in rolling out its configuration, or the device may not be enabled for the alpha.
 - **Docs mismatch in `genai-speech-recognition:1.0.0-alpha2`:** the docs show `download` as a property,
   but the API is a function, `download()`.
 
