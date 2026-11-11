@@ -7,6 +7,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import android.graphics.Color
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import com.akshay.offlineasr.ui.AppRoot
 import com.akshay.offlineasr.ui.theme.OfflineHinglishASRTheme
 
@@ -20,6 +24,11 @@ class MainActivity : ComponentActivity() {
       navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
     )
     super.onCreate(savedInstanceState)
-    setContent { OfflineHinglishASRTheme { AppRoot(vm) } }
+    setContent {
+      OfflineHinglishASRTheme {
+        // Surface sets LocalContentColor = onBackground (white); without it un-coloured Text defaults to black.
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { AppRoot(vm) }
+      }
+    }
   }
 }

@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "OfflineAsr"
 
-class AsrViewModel(app: Application) : AndroidViewModel(app) {
+class AsrViewModel(app: Application) : AndroidViewModel(app), AsrActions {
 
   private val _state = MutableStateFlow(UiState())
   val state: StateFlow<UiState> = _state.asStateFlow()
@@ -62,7 +62,7 @@ class AsrViewModel(app: Application) : AndroidViewModel(app) {
    * `preferredMode` — there is no getter for the mode actually in use — so the label shows the
    * mode we requested on the client whose checkStatus() wasn't UNAVAILABLE.
    */
-  fun initRecognizer() {
+  override fun initRecognizer() {
     initJob?.cancel(); downloadJob?.cancel(); stopListeningInternal()
     recognizer?.close(); recognizer = null
     val loc = _state.value.locale
@@ -106,13 +106,13 @@ class AsrViewModel(app: Application) : AndroidViewModel(app) {
     }
   }
 
-  fun setLocale(locale: AsrLocale) {
+  override fun setLocale(locale: AsrLocale) {
     if (locale == _state.value.locale) return
     _state.update { it.copy(locale = locale) }
     initRecognizer()
   }
 
-  fun downloadModel() {
+  override fun downloadModel() {
     val r = recognizer ?: return
     if (downloadJob?.isActive == true) return
     _state.update { it.copy(download = DownloadUi(), featureStatus = FeatureStatus.DOWNLOADING) }
@@ -140,7 +140,7 @@ class AsrViewModel(app: Application) : AndroidViewModel(app) {
 
   // ---------------------------------------------------------------- recognition
 
-  fun toggleMic() = if (_state.value.listening) stopListening() else startListening()
+  override fun toggleMic() = if (_state.value.listening) stopListening() else startListening()
 
   private fun startListening() {
     val r = recognizer ?: return
@@ -191,7 +191,7 @@ class AsrViewModel(app: Application) : AndroidViewModel(app) {
 
   // ---------------------------------------------------------------- TTS
 
-  fun speakFinal() {
+  override fun speakFinal() {
     val text = _state.value.finalText.ifBlank { return }
     ttsJob?.cancel()
     ttsJob = viewModelScope.launch {
@@ -201,45 +201,21 @@ class AsrViewModel(app: Application) : AndroidViewModel(app) {
 
   // ---------------------------------------------------------------- test mode
 
-  fun openTest() {
-    stopListeningInternal()
-    _state.update {
-      val existing = it.runs[it.locale]
-      val run = if (existing == null || existing.finished) TestRun(it.locale, it.resolvedModeLabel) else existing
-      it.copy(screen = Screen.TEST, runs = it.runs + (it.locale to run), partialText = "", finalText = "", sessionEnded = false, tts = TtsUi())
-    }
-  }
+  override fun openTest() { stopListeningInternal(); _state.update { it.withTestOpened() } }
 
-  fun judge(survived: Boolean) {
-    _state.update { s ->
-      val run = s.currentRun ?: return@update s
-      val idx = run.nextIndex
-      if (idx >= TEST_SENTENCES.size) return@update s
-      val updated = run.copy(answers = run.answers.toMutableList().also { it[idx] = Judgement(s.finalText, survived) })
-      s.copy(
-        runs = s.runs + (s.locale to updated),
-        partialText = "", finalText = "", recognitionError = null, sessionEnded = false, tts = TtsUi(),
-        screen = if (updated.finished) Screen.RESULTS else Screen.TEST,
-      )
-    }
-  }
+  override fun judge(survived: Boolean) = _state.update { it.withJudgement(survived) }
 
-  fun retake() = _state.update { it.copy(partialText = "", finalText = "", recognitionError = null, sessionEnded = false) }
+  override fun retake() = _state.update { it.withRetake() }
 
-  fun showResults() { stopListeningInternal(); _state.update { it.copy(screen = Screen.RESULTS) } }
+  override fun showResults() { stopListeningInternal(); _state.update { it.copy(screen = Screen.RESULTS) } }
 
-  fun goHome() { stopListeningInternal(); _state.update { it.copy(screen = Screen.HOME, partialText = "", finalText = "", sessionEnded = false) } }
+  override fun goHome() { stopListeningInternal(); _state.update { it.withHome() } }
 
   /** From the results card: switch locale (re-inits the recognizer) and start a fresh run there. */
-  fun runTestIn(locale: AsrLocale) {
+  override fun runTestIn(locale: AsrLocale) {
     if (locale != _state.value.locale) setLocale(locale)
-    _state.update {
-      it.copy(screen = Screen.TEST, runs = it.runs + (locale to TestRun(locale, it.resolvedModeLabel)),
-        partialText = "", finalText = "", sessionEnded = false, tts = TtsUi())
-    }
+    _state.update { it.withFreshRun(locale) }
   }
-
-  private val UiState.resolvedModeLabel get() = if (checking || mode == null) "…" else modeLabel
 
   override fun onCleared() {
     runCatching { connectivity.unregisterNetworkCallback(networkCallback) }

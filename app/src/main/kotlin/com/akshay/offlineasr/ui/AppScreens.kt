@@ -13,6 +13,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,6 +61,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -69,6 +73,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.akshay.offlineasr.AsrActions
 import com.akshay.offlineasr.AsrLocale
 import com.akshay.offlineasr.AsrViewModel
 import com.akshay.offlineasr.Screen
@@ -94,6 +99,12 @@ import com.google.mlkit.genai.common.FeatureStatus
 @Composable
 fun AppRoot(vm: AsrViewModel) {
   val state by vm.state.collectAsStateWithLifecycle()
+  AppContent(state, vm)
+}
+
+/** Stateless UI: everything comes from [state], every event goes to [vm]. */
+@Composable
+fun AppContent(state: UiState, vm: AsrActions) {
   val context = LocalContext.current
 
   // ---- RECORD_AUDIO runtime permission flow
@@ -138,18 +149,25 @@ fun AppRoot(vm: AsrViewModel) {
 @Composable
 private fun Header(state: UiState) {
   Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
+    OneLine(
+      when { state.checking -> "Mode: …"; state.mode == null -> "Mode: NONE"; else -> "Mode: ${state.modeLabel}" },
+      MaterialTheme.typography.displaySmall.copy(color = Mint), maxSize = 34.sp,
+    )
     Row(verticalAlignment = Alignment.CenterVertically) {
-      Column(Modifier.weight(1f)) {
-        Text(
-          if (state.checking) "Mode: …" else "Mode: ${state.modeLabel}",
-          style = MaterialTheme.typography.displaySmall, color = Mint,
-        )
-        Text("Locale: ${state.locale.tag}", style = MaterialTheme.typography.headlineSmall)
-      }
+      Text("Locale: ${state.locale.tag}", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
       NetworkBadge(state.online)
     }
     if (state.screen != Screen.HOME) ScoreOverlay(state)
   }
+}
+
+/** Single-line label that shrinks to fit instead of wrapping — keeps the recording's top area stable. */
+@Composable
+private fun OneLine(text: String, style: TextStyle, maxSize: TextUnit, modifier: Modifier = Modifier) {
+  BasicText(
+    text, style = style, maxLines = 1, modifier = modifier,
+    autoSize = TextAutoSize.StepBased(minFontSize = 14.sp, maxFontSize = maxSize, stepSize = 1.sp),
+  )
 }
 
 @Composable
@@ -174,10 +192,10 @@ private fun ScoreOverlay(state: UiState) {
           .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center,
       ) {
-        Text(
+        OneLine(
           "${loc.tag} · ${run?.let { "${it.correct}/${it.judged}" } ?: "–"}",
-          fontSize = 30.sp, fontWeight = FontWeight.Black,
-          color = if (active) NearBlack else TextMuted,
+          TextStyle(fontWeight = FontWeight.Black, color = if (active) NearBlack else TextMuted),
+          maxSize = 30.sp, modifier = Modifier.padding(horizontal = 10.dp),
         )
       }
     }
@@ -233,6 +251,10 @@ private fun LocaleSwitcher(state: UiState, onLocale: (AsrLocale) -> Unit) {
         onClick = { onLocale(loc) },
         enabled = !state.listening,
         shape = SegmentedButtonDefaults.itemShape(i, AsrLocale.entries.size),
+        colors = SegmentedButtonDefaults.colors(
+          activeContainerColor = Mint, activeContentColor = NearBlack, activeBorderColor = Mint,
+          inactiveContainerColor = Panel, inactiveContentColor = Color.White, inactiveBorderColor = Outline,
+        ),
         modifier = Modifier.height(52.dp),
       ) { Text(loc.tag, style = MaterialTheme.typography.labelLarge) }
     }
@@ -319,7 +341,7 @@ private fun ScrollColumn(content: @Composable ColumnScope.() -> Unit) {
 // ------------------------------------------------------------------ screens
 
 @Composable
-private fun HomeScreen(state: UiState, vm: AsrViewModel, onMic: () -> Unit) = ScrollColumn {
+private fun HomeScreen(state: UiState, vm: AsrActions, onMic: () -> Unit) = ScrollColumn {
   StatusAndDownload(state, vm::downloadModel)
   LocaleSwitcher(state, vm::setLocale)
   TranscriptCard(state, "Tap the mic and speak Hinglish…", vm::speakFinal)
@@ -334,7 +356,7 @@ private fun HomeScreen(state: UiState, vm: AsrViewModel, onMic: () -> Unit) = Sc
 }
 
 @Composable
-private fun TestScreen(state: UiState, vm: AsrViewModel, onMic: () -> Unit) = ScrollColumn {
+private fun TestScreen(state: UiState, vm: AsrActions, onMic: () -> Unit) = ScrollColumn {
   val run = state.currentRun ?: return@ScrollColumn
   val idx = run.nextIndex.coerceAtMost(TEST_SENTENCES.lastIndex)
   if (state.featureStatus != FeatureStatus.AVAILABLE) StatusAndDownload(state, vm::downloadModel)
@@ -365,7 +387,7 @@ private fun TestScreen(state: UiState, vm: AsrViewModel, onMic: () -> Unit) = Sc
 }
 
 @Composable
-private fun ResultsScreen(state: UiState, vm: AsrViewModel) = ScrollColumn {
+private fun ResultsScreen(state: UiState, vm: AsrActions) = ScrollColumn {
   val context = LocalContext.current
   Row(verticalAlignment = Alignment.CenterVertically) {
     TextButton(onClick = vm::goHome) { Text("← Home") }

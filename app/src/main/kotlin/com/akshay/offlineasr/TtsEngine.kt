@@ -60,7 +60,12 @@ class TtsEngine(private val context: Context) {
 
   /** Returns null on success, or a human-readable reason to fall back. */
   private suspend fun speakMlKit(text: String, asr: AsrLocale, onUpdate: (TtsUi) -> Unit): String? {
-    val client = mlkit ?: SpeechSynthesis.getClient(speechSynthesizerOptions(asr.locale)).also { mlkit = it }
+    val client = mlkit ?: SpeechSynthesis.getClient(
+      // NOTE: the docs call speechSynthesizerOptions(locale) with no lambda, but genai-text-to-speech
+      // 1.0.0-alpha1 ships without the Kotlin `$default` bridge → NoSuchMethodError at runtime.
+      // Passing the (empty) builder lambda explicitly calls the method that does exist.
+      speechSynthesizerOptions(asr.locale) {},
+    ).also { mlkit = it }
 
     var voice: VoiceInfo? = null
     for (loc in candidateLocales(asr)) {

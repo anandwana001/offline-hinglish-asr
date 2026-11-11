@@ -63,6 +63,26 @@ adb shell am start -n com.akshay.offlineasr/.MainActivity
 |  |  |  |  |  |
 |  |  |  |  |  |
 
+## Tests
+
+Run these on an emulator or a phone:
+
+```bash
+./gradlew :app:installDebug :app:installDebugAndroidTest
+adb shell am instrument -w com.akshay.offlineasr.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+- `TestModeFlowTest` drives the real UI and the real test-mode state logic with a **scripted** recognizer.
+  It covers 10 sentences in hi-IN (7/10), a full en-IN run (10/10), both scores side by side, the copied
+  Markdown, and the UNAVAILABLE and DOWNLOADING screens. Screenshots are saved to
+  `/sdcard/Android/data/com.akshay.offlineasr/files/shots/`. The scripted recognizer exists only in tests
+  and never ships in the app.
+- `TtsEngineTest` runs the **real** TTS path and reports which engine spoke.
+
+Emulator result (Pixel-class AVD, API 36.1 with Google Play, arm64): ADVANCED and BASIC are both
+`UNAVAILABLE` for hi-IN and en-IN. The image has no AICore, and its Speech Services app is from Aug 2025.
+ML Kit TTS returns no voices there, so the app falls back to platform TTS. You need a real device for real results.
+
 ## Caveats (alpha API)
 
 - The API only lets you *request* a mode (`preferredMode`). It has no getter for the mode actually in
@@ -71,6 +91,12 @@ adb shell am start -n com.akshay.offlineasr/.MainActivity
   with an unlocked bootloader.
 - ML Kit GenAI TTS officially supports a short list of devices (Pixel 8+, Galaxy S25/S26 and a few others)
   and has no en-IN voice. On other devices the app falls back to platform TTS and says so.
+- **Bug in `genai-text-to-speech:1.0.0-alpha1`:** the documented call `speechSynthesizerOptions(Locale.US)`
+  compiles but throws `NoSuchMethodError: speechSynthesizerOptions$default` at runtime, because the AAR
+  has no Kotlin default-argument bridge. Workaround: pass the lambda explicitly, as in
+  `speechSynthesizerOptions(locale) {}`.
+- **Docs mismatch in `genai-speech-recognition:1.0.0-alpha2`:** the docs show `download` as a property,
+  but the API is a function, `download()`.
 
 Docs: [Speech recognition](https://developers.google.com/ml-kit/genai/speech-recognition/android) ·
 [Text to speech](https://developers.google.com/ml-kit/genai/text-to-speech/android)

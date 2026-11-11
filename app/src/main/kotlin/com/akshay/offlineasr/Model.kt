@@ -121,3 +121,49 @@ fun buildMarkdown(state: UiState): String = buildString {
     }
   }
 }
+
+/** Everything the UI can ask for. Implemented by [AsrViewModel]; tests can supply their own. */
+interface AsrActions {
+  fun initRecognizer()
+  fun setLocale(locale: AsrLocale)
+  fun downloadModel()
+  fun toggleMic()
+  fun speakFinal()
+  fun openTest()
+  fun judge(survived: Boolean)
+  fun retake()
+  fun showResults()
+  fun goHome()
+  fun runTestIn(locale: AsrLocale)
+}
+
+// ---- Pure state transitions for test mode (shared by the ViewModel and tests).
+
+private val UiState.resolvedModeLabel get() = if (checking || mode == null) "…" else modeLabel
+
+private fun UiState.clearedTranscript() =
+  copy(partialText = "", finalText = "", recognitionError = null, sessionEnded = false, tts = TtsUi())
+
+fun UiState.withTestOpened(): UiState {
+  val existing = runs[locale]
+  val run = if (existing == null || existing.finished) TestRun(locale, resolvedModeLabel) else existing
+  return clearedTranscript().copy(screen = Screen.TEST, runs = runs + (locale to run))
+}
+
+fun UiState.withFreshRun(locale: AsrLocale): UiState =
+  clearedTranscript().copy(screen = Screen.TEST, runs = runs + (locale to TestRun(locale, resolvedModeLabel)))
+
+fun UiState.withJudgement(survived: Boolean): UiState {
+  val run = currentRun ?: return this
+  val idx = run.nextIndex
+  if (idx >= TEST_SENTENCES.size) return this
+  val updated = run.copy(answers = run.answers.toMutableList().also { it[idx] = Judgement(finalText, survived) })
+  return clearedTranscript().copy(
+    runs = runs + (locale to updated),
+    screen = if (updated.finished) Screen.RESULTS else Screen.TEST,
+  )
+}
+
+fun UiState.withRetake(): UiState = copy(partialText = "", finalText = "", recognitionError = null, sessionEnded = false)
+
+fun UiState.withHome(): UiState = copy(screen = Screen.HOME, partialText = "", finalText = "", sessionEnded = false)
