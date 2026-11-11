@@ -1,0 +1,76 @@
+# Offline Hinglish ASR
+
+A small Android app for stress-testing Google's **ML Kit GenAI Speech Recognition API (alpha)** on
+real, non-Pixel phones, using everyday **Hinglish** (code-mixed Hindi + English) sentences. The UI is
+built for screen recording: large mode, locale, and score labels, plus an **OFFLINE ✈️ / ONLINE** badge
+that shows airplane mode was on.
+
+## What it tests
+
+- **Feature status** for the chosen locale (`AVAILABLE` / `DOWNLOADABLE` / `DOWNLOADING` / `UNAVAILABLE`),
+  with a **Download model** button and a progress bar.
+- **Mode:** it asks for `MODE_ADVANCED` (GenAI / Gemini Nano) first and falls back to `MODE_BASIC`
+  when ADVANCED reports `UNAVAILABLE`.
+- **Locale:** `hi-IN` vs `en-IN`, set through `speechRecognizerOptions { locale = … }`.
+  hi-IN is documented (beta) for both modes. en-IN is **not** in the documented list for either mode,
+  so the app just reports whatever status the device returns.
+- **Fully offline recognition** from the mic. Partial text shows in grey and final text in white.
+- **Read-back (optional):** ML Kit GenAI Text-to-Speech, with a fallback to the platform `TextToSpeech`.
+  The UI labels which engine spoke.
+
+## Stack
+
+Kotlin · Jetpack Compose · Material 3 · single activity · one `AndroidViewModel` · version catalog ·
+minSdk 31 · AGP 9.5.1 · Kotlin 2.4.21 · Gradle 9.9.1 · Compose BOM 2026.09.00
+
+| Artifact | Version |
+|---|---|
+| `com.google.mlkit:genai-speech-recognition` | `1.0.0-alpha2` |
+| `com.google.mlkit:genai-text-to-speech` | `1.0.0-alpha1` |
+| `com.google.mlkit:genai-common` (transitive) | `1.0.0-beta5` |
+
+## Run it
+
+```bash
+./gradlew :app:installDebug
+adb shell am start -n com.akshay.offlineasr/.MainActivity
+```
+
+1. Launch with internet on and grant the mic permission. If the status says `DOWNLOADABLE`, tap **Download model**.
+2. Turn on **airplane mode**. The badge switches to **OFFLINE ✈️**.
+3. Tap **Start 10-sentence test**. For each sentence, tap the mic, read the sentence, tap stop, then judge it:
+   **✓ Meaning survived** or **✗ Miss**. Spelling variants and Devanagari vs Roman script both count as correct.
+4. On the results screen, tap **Run en-IN** to repeat the test in the other locale. Both scores appear side by side.
+5. Tap **Copy results as Markdown** and paste the output into the table below.
+
+## The 10 sentences
+
+1. Kal office nahi aa raha, mera laptop crash ho gaya.
+2. Bhai, meeting ko 4 baje shift kar do please.
+3. Mummy ne bola hai ki aaj Bhai Dooj pe ghar jaldi aana.
+4. Ye bug sirf release build mein aa raha hai, debug mein nahi.
+5. Mujhe Udaipur se Jaipur ka train ticket book karna hai.
+6. Ek kaam karo, PR merge karne se pehle tests chala lo.
+7. Chhath ke liye Bihar ki saari trains full hain yaar.
+8. Mera UPI payment fail ho gaya but paisa kat gaya.
+9. Compose mein recomposition bahut zyada ho raha hai.
+10. Weekend pe Android Engineers ka meetup hai, aa jaana.
+
+## Results
+
+| Device | Mode | Locale | Score | Missed words |
+|---|---|---|---|---|
+|  |  |  |  |  |
+|  |  |  |  |  |
+
+## Caveats (alpha API)
+
+- The API only lets you *request* a mode (`preferredMode`). It has no getter for the mode actually in
+  use, so the "Mode" label shows the requested mode on the first client whose `checkStatus()` was not `UNAVAILABLE`.
+- Google documents ADVANCED for Pixel 10/11 and Gemini Nano chipsets only. It is not supported on devices
+  with an unlocked bootloader.
+- ML Kit GenAI TTS officially supports a short list of devices (Pixel 8+, Galaxy S25/S26 and a few others)
+  and has no en-IN voice. On other devices the app falls back to platform TTS and says so.
+
+Docs: [Speech recognition](https://developers.google.com/ml-kit/genai/speech-recognition/android) ·
+[Text to speech](https://developers.google.com/ml-kit/genai/text-to-speech/android)
