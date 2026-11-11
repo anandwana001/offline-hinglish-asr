@@ -5,6 +5,27 @@ real, non-Pixel phones, using everyday **Hinglish** (code-mixed Hindi + English)
 built for screen recording: large mode, locale, and score labels, plus an **OFFLINE ✈️ / ONLINE** badge
 that shows airplane mode was on.
 
+## Headline result
+
+**hi-IN · BASIC mode · airplane mode: 9/10 sentences kept their meaning** on a OnePlus Nord 2 5G
+(MediaTek Dimensity 1200, Android 13), a phone that is not on Google's supported-device list. This is
+human speech from a single speaker, judged by hand. ADVANCED mode (Gemini Nano) is `UNAVAILABLE` on this chipset.
+
+| Live transcription | The one miss | Results |
+|---|---|---|
+| <img src="docs/screenshots/nord2-hi-in-sentence1.jpg" width="240" alt="hi-IN transcript in Devanagari, OFFLINE badge, Mode BASIC"> | <img src="docs/screenshots/nord2-hi-in-bug-miss.jpg" width="240" alt="bug transcribed as baag (garden), debug as debug in Devanagari"> | <img src="docs/screenshots/nord2-hi-in-results.jpg" width="240" alt="Results card hi-IN 9/10"> |
+
+Things to notice:
+- **hi-IN writes everything in Devanagari**, English words included: लैपटॉप क्रैश, यूपीआई पेमेंट, पीआर मर्ज.
+- **The only outright miss is dev jargon:** "bug" became बाग ("garden"), and "debug" became देबूग.
+- **Near misses that still got ✓:**
+  - "Chhath" became छत ("roof")
+  - "recomposition" became "मेरी कंपोजिशन"
+  - "Android" became "नड्रॉयड"
+  - "kaam" became "कम"
+- **en-IN is a different story.** On sentence 1 it gave *"Cal office Nahin. A Raha Mera laptop Crush. Ho Gaya."*
+  It forces the Hindi words into English spellings and words. The full en-IN run is not recorded yet.
+
 ## Screenshots
 
 **Real run on an emulator** (API 36.1 with Google Play). ML Kit reports `UNAVAILABLE` in both modes, and airplane mode is on:
@@ -80,11 +101,32 @@ adb shell am start -n com.akshay.offlineasr/.MainActivity
 |---|---|---|---|---|
 | Android Emulator (sdk_gphone64_arm64, Android 16 / API 36.1, Google Play) | NONE — ADVANCED & BASIC both `UNAVAILABLE` | hi-IN | n/a (could not run) | n/a |
 | Android Emulator (sdk_gphone64_arm64, Android 16 / API 36.1, Google Play) | NONE — ADVANCED & BASIC both `UNAVAILABLE` | en-IN | n/a (could not run) | n/a |
-| OnePlus Nord 2 5G (DN2101, Dimensity 1200 MT6893, Android 13) | NONE: Speech Services 210645707 was below the 210665810 minimum, so `UNAVAILABLE`. After updating to 210693705: `PERMISSION_DENIED: Api access revoked` | hi-IN | n/a (could not run) | n/a |
-|  |  | hi-IN |  |  |
-|  |  | en-IN |  |  |
+| OnePlus Nord 2 5G (DN2101, Dimensity 1200 MT6893, Android 13), Speech Services 210693705, airplane mode | **BASIC** (ADVANCED `UNAVAILABLE`) | hi-IN | **9/10** | bug → बाग, debug → देबूग (✗). Accepted near misses: Chhath → छत, recomposition → मेरी कंपोजिशन, Android → नड्रॉयड, kaam → कम |
+| OnePlus Nord 2 5G (same) | BASIC | en-IN | not finished (1 sentence recorded) | "Kal … nahi aa raha … crash" → "Cal office Nahin. A Raha Mera laptop Crush. Ho Gaya." |
+|  |  |  |  |  |
 
-The blank rows are for a real phone. Use **Copy results as Markdown** in the app to get the per-sentence transcripts.
+Getting the Nord 2 to work took two fixes:
+1. Speech Services was version `210645707`, below ML Kit's hidden minimum of `210665810`, so ML Kit reported `UNAVAILABLE`. Updating it from Play fixed that.
+2. Right after the update, Speech Services answered `PERMISSION_DENIED: Api access revoked`. Some time later, BASIC became available. hi-IN needed a one-time model download, while en-IN was already on the phone.
+
+<details><summary>hi-IN transcripts (Nord 2, BASIC, offline)</summary>
+
+| # | Said | Transcript | ✓/✗ |
+|---|---|---|---|
+| 1 | Kal office nahi aa raha, mera laptop crash ho gaya. | कल ऑफिस नहीं ए रहा मेरा लैपटॉप क्रैश हो गया है। | ✓ |
+| 2 | Bhai, meeting ko 4 baje shift kar do please. | भाई मीटिंग को 4:00 बजे शिफ्ट कर दो प्लीज। | ✓ |
+| 3 | Mummy ne bola hai ki aaj Bhai Dooj pe ghar jaldi aana. | मम्मी ने बोला है की आज भाई दूज पर घर जल्दी आना। | ✓ |
+| 4 | Ye bug sirf release build mein aa raha hai, debug mein nahi. | यह बाग सिर्फ रिलीज बिल्ड में ए रहा है देबूग में नहीं। | ✗ |
+| 5 | Mujhe Udaipur se Jaipur ka train ticket book karna hai. | मुझे उदयपुर से जयपुर का ट्रेन टिकट बुक करना है। | ✓ |
+| 6 | Ek kaam karo, PR merge karne se pehle tests chala lo. | एक कम करो। पीआर मर्ज करने से पहले टेस्ट चला लो। | ✓ |
+| 7 | Chhath ke liye Bihar ki saari trains full hain yaar. | छत के लिए बिहार के सारी ट्रेनस फुल है यार। | ✓ |
+| 8 | Mera UPI payment fail ho gaya but paisa kat gaya. | मेरा यूपीआई पेमेंट फैल हो गया बट पैसा कट गया। | ✓ |
+| 9 | Compose mein recomposition bahut zyada ho raha hai. | कंपोज मेरी कंपोजिशन बहुत ज्यादा हो रहा है। | ✓ |
+| 10 | Weekend pe Android Engineers ka meetup hai, aa jaana. | वीकएंड पे नड्रॉयड इंजिनियर्स का मीट अप है ए जना | ✓ |
+
+</details>
+
+Use **Copy results as Markdown** in the app to add your own device.
 
 ## Tests
 
