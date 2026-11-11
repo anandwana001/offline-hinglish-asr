@@ -5,6 +5,24 @@ real, non-Pixel phones, using everyday **Hinglish** (code-mixed Hindi + English)
 built for screen recording: large mode, locale, and score labels, plus an **OFFLINE ✈️ / ONLINE** badge
 that shows airplane mode was on.
 
+## Screenshots
+
+**Real run on an emulator** (API 36.1 with Google Play). ML Kit reports `UNAVAILABLE` in both modes, and airplane mode is on:
+
+<img src="docs/screenshots/emulator-unavailable.png" width="260" alt="Speech recognition UNAVAILABLE screen on the emulator, with Mode NONE and the OFFLINE badge">
+
+**UI walkthrough.** These come from the instrumented UI test (`TestModeFlowTest`), which uses a *scripted*
+recognizer because ML Kit is unavailable on the emulator. The transcripts and scores are test data,
+**not real ASR results**.
+
+| Home + read-back | Test: listening (partial text) | Test: judge |
+|---|---|---|
+| <img src="docs/screenshots/home.png" width="240" alt="Home screen with transcript and read-back engine label"> | <img src="docs/screenshots/test-listening.png" width="240" alt="Test screen while listening, partial text in grey"> | <img src="docs/screenshots/test-judge.png" width="240" alt="Test screen with transcript and Meaning survived / Miss buttons"> |
+
+| Results: both locales | Model download |
+|---|---|
+| <img src="docs/screenshots/results.png" width="240" alt="Results with hi-IN and en-IN scores side by side"> | <img src="docs/screenshots/downloading.png" width="240" alt="Feature status DOWNLOADING with progress bar"> |
+
 ## What it tests
 
 - **Feature status** for the chosen locale (`AVAILABLE` / `DOWNLOADABLE` / `DOWNLOADING` / `UNAVAILABLE`),
